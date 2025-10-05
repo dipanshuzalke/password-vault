@@ -5,6 +5,12 @@ It allows users to **store, manage, and protect** their credentials safely — a
 
 ---
 
+## 🌐 Live Demo
+
+👉 **[Password Vault - Live](https://password-vault-phi.vercel.app/)**  
+
+---
+
 ## ✨ Features
 
 - 🔐 **User Authentication** (Signup & Login with JWT)
@@ -47,8 +53,10 @@ npm install
 Create a `.env.local` file in the root directory and add:
 
 ```bash
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_secret_key
+MONGODB_URI="mongodb+srv://dipanshuzalke_db_user:F52veJtV09m3ic5f@cluster0.ngegfun.mongodb.net/password-vault?retryWrites=true&w=majority&appName=Cluster0"
+JWT_SECRET="a_long_random_string_here"
+NEXT_PUBLIC_APP_NAME="Password Vault"
+NEXT_PUBLIC_CRYPTO_KEY="supersecretclientkey"
 ```
 
 ### 4️⃣ Run the development server
@@ -90,6 +98,6 @@ password-vault/
 
 ---
 
-## 🔒 What We Used for Crypto and Why
+## 🔒 What I Used for Crypto and Why
 
 I used the **`crypto-js`** library for encryption and decryption of vault items. This allows us to **encrypt passwords client-side** before sending them to the server, ensuring that sensitive data is **never stored in plaintext** in the database, while still being easy to decrypt securely when needed.
