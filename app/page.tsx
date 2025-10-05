@@ -1,103 +1,269 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { decrypt, encrypt } from "@/lib/crypto";
+
+interface VaultItem {
+  _id: string;
+  title: string;
+  username: string;
+  password: string;
+  url?: string;
+  notes?: string;
+}
+
+export default function Dashboard() {
+  const [items, setItems] = useState<VaultItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<VaultItem | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  const fetchItems = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/vault", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+        return;
+      }
+
+      const data = await res.json();
+      if (Array.isArray(data)) setItems(data);
+      else if (Array.isArray(data.items)) setItems(data.items);
+      else setItems([]);
+    } catch (error) {
+      console.error("Error fetching vault items:", error);
+      setItems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  const highlightMatch = (text: string, query: string) => {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, "gi");
+    const parts = text.split(regex);
+
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <mark key={i} className="bg-yellow-300 rounded px-0.5">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const filteredItems = items.filter((item) => {
+    const lower = search.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(lower) ||
+      item.username.toLowerCase().includes(lower) ||
+      (item.url && item.url.toLowerCase().includes(lower))
+    );
+  });
+
+  const handleDelete = async (id: string) => {
+    await fetch(`/api/vault/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchItems();
+  };
+
+  const handleCopy = (id: string, password: string) => {
+    navigator.clipboard.writeText(decrypt(password));
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 15000);
+  };
+
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    const updated = {
+      ...editingItem,
+      password: encrypt(editingItem.password),
+    };
+
+    await fetch(`/api/vault/${editingItem._id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(updated),
+    });
+
+    setEditingItem(null);
+    fetchItems();
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-semibold">My Vault</h1>
+        <Link href="/add-vault">
+          <button className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 transition">
+            + Add Vault
+          </button>
+        </Link>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <input
+        type="text"
+        placeholder="Search items..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="mb-4 w-full border p-2 rounded"
+      />
+
+      {isLoading ? (
+        <p className="text-gray-500">Loading...</p>
+      ) : filteredItems.length === 0 ? (
+        <p className="text-gray-500">No items found</p>
+      ) : (
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {filteredItems.map((item: VaultItem) => (
+            <div
+              key={item._id}
+              className="border p-3 rounded shadow-sm flex flex-col justify-between"
+            >
+              <div>
+                <h2 className="font-semibold text-lg mb-1">
+                  {highlightMatch(item.title, search)}
+                </h2>
+                <p className="text-sm">Username: {highlightMatch(item.username, search)}</p>
+                <p className="text-sm">
+                  Password:{" "}
+                  {copiedId === item._id ? decrypt(item.password) : "••••••••"}
+                </p>
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    className="text-blue-600 text-sm hover:underline"
+                  >
+                    Visit site
+                  </a>
+                )}
+              </div>
+
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => handleCopy(item._id, item.password)}
+                  className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                >
+                  {copiedId === item._id ? "Copied!" : "Copy"}
+                </button>
+                <button
+                  onClick={() =>
+                    setEditingItem({
+                      ...item,
+                      password: decrypt(item.password),
+                    })
+                  }
+                  className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(item._id)}
+                  className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+
+      {/* ✏️ Edit Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <form
+            onSubmit={handleEditSave}
+            className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-lg w-[90%] max-w-md space-y-3"
+          >
+            <h2 className="text-xl font-semibold mb-2">Edit Vault</h2>
+
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="Title"
+              value={editingItem.title}
+              onChange={(e) =>
+                setEditingItem({ ...editingItem, title: e.target.value })
+              }
+              required
+            />
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="Username"
+              value={editingItem.username}
+              onChange={(e) =>
+                setEditingItem({ ...editingItem, username: e.target.value })
+              }
+              required
+            />
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="Password"
+              value={editingItem.password}
+              onChange={(e) =>
+                setEditingItem({ ...editingItem, password: e.target.value })
+              }
+              required
+            />
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="URL"
+              value={editingItem.url || ""}
+              onChange={(e) =>
+                setEditingItem({ ...editingItem, url: e.target.value })
+              }
+            />
+            <textarea
+              className="w-full border p-2 rounded"
+              placeholder="Notes"
+              value={editingItem.notes || ""}
+              onChange={(e) =>
+                setEditingItem({ ...editingItem, notes: e.target.value })
+              }
+            />
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="px-4 py-2 rounded bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
