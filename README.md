@@ -1,8 +1,3 @@
-Here’s a clean and professional **README.md** file for your **Password Vault** project 👇
-
----
-
-````markdown
 # 🔒 Password Vault
 
 A secure and modern password management web app built using **Next.js**, **TypeScript**, **MongoDB**, and **crypto-js** for encryption.  
@@ -74,7 +69,7 @@ password-vault/
 ├── app/
 │   ├── api/
 │   │   └── auth/      # Login & Signup routes
-│   ├── dashboard/     # User dashboard with vaults
+│   ├── add-vault/     # Add vault page
 │   ├── login/         # Login page
 │   ├── signup/        # Signup page
 │   └── page.tsx       # Home page
@@ -95,42 +90,6 @@ password-vault/
 
 ---
 
-## 🧪 Deployment
-
-The app is easily deployable on **Vercel**:
-
-1. Push your code to GitHub.
-2. Connect the repository to [Vercel](https://vercel.com/).
-3. Add environment variables (`MONGODB_URI`, `JWT_SECRET`) in Vercel settings.
-4. Click **Deploy** 🚀
-
----
-
 ## 🔒 What We Used for Crypto and Why
 
-We used the **`crypto-js`** library for encrypting and decrypting sensitive password data before storing it in MongoDB.
-It provides **AES encryption** that’s easy to integrate and ensures passwords are **never stored in plain text**, enhancing data security.
-
----
-
-## 👨‍💻 Author
-
-**Piyush Zalke**
-💼 Full Stack Developer (MERN + Next.js)
-📍 India
-🔗 [GitHub Profile](https://github.com/dipanshuzalke)
-
----
-
-## 🪶 License
-
-This project is licensed under the **MIT License**.
-
----
-
-```
-
----
-
-Would you like me to add **screenshots section** (with placeholders) to this README so it looks more complete and professional for GitHub?
-```
+I used the **`crypto-js`** library for encryption and decryption of vault items. This allows us to **encrypt passwords client-side** before sending them to the server, ensuring that sensitive data is **never stored in plaintext** in the database, while still being easy to decrypt securely when needed.
