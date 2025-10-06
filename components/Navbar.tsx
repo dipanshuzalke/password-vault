@@ -11,17 +11,17 @@ export default function Navbar() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // 🔁 Check token whenever route changes (reactive behavior)
   useEffect(() => {
-    // Check if user token exists in localStorage
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
-  }, []);
+  }, [pathname]);
 
-  function handleLogout() {
+  const handleLogout = () => {
     localStorage.removeItem("token");
     setIsLoggedIn(false);
     router.push("/login");
-  }
+  };
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 border-b backdrop-blur-md bg-white/70 dark:bg-zinc-900/70 sticky top-0 z-50 transition-all">
